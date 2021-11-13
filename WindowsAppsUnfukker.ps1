@@ -34,7 +34,7 @@ if (-not ($WinVer.Major -eq 10 -and $WinVer.Build -lt 22000))
 	Write-Warning "This script has only been tested on Windows 10. Cuntinue at your own risk!!" -WarningAction Inquire
 }
 
-if ([Security.Principal.WindowsIdentity]::GetCurrent().Name -ne 'NT AUTHORITY\SYSTEM')
+if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne 'S-1-5-18')
 {
 	Write-Host
 	Write-Host "Error: Not running as SYSTEM user!! Please start this script via PsExec." -ForegroundColor Red
@@ -103,7 +103,7 @@ foreach ($WinAppsPath in $WinAppsPaths)
 		# Now, time to smear the bullshit
 		foreach ($AppFolder in $AppFolders)
 		{
-			if ($AppFolder.Name -Match '(.+?)_.+(_.+)')
+			if ($AppFolder.Name -Match '(.+?)_.+(_\w+)')
 			{
 				$AppFolderPath = $AppFolder.FullName
 				$AppFolderACL = Get-Acl $AppFolderPath

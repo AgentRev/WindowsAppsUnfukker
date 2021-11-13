@@ -21,3 +21,6 @@ Jesus Fucking Christ.
 2. Open CMD as admin, then access that folder: `cd "PSTOOLS_PATH_HERE"`
 3. Execute the script: <br>
    `psexec.exe -s -i powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1"`
+
+---
+Note: If your objective is to modify files inside an app folder, there's an extra step required after running the script. You have to rename the app folder by adding `-old` at the end, make a copy of the folder, and rename the copy back to the original name. This will allow you to modify the files inside if they are not [encrypted](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cipher). I don't why "Full control" permissions alone aren't sufficient, probably just [Microsoft eating a bag of dicks](https://www.youtube.com/watch?v=Gksc2aR2KCk) as usual.
