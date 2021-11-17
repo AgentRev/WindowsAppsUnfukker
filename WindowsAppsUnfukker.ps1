@@ -75,6 +75,33 @@ if ($BackupExistingPerms)
 foreach ($WinAppsPath in $WinAppsPaths)
 {
 	Write-Host
+	Write-Host "Fixing WindowsApps permissions..." -ForegroundColor Cyan
+
+	# Default ownership and permissions, courtesy of https://www.winhelponline.com/blog/windowsapps-folder-restore-default-permissions/
+	$WinAppsDefaultPerms = 'O:S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464G:SYD:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;OICIIO;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;S-1-15-3-1024-3635283841-2530182609-996808640-1887759898-3848208603-3313616867-983405619-2501854204)(A;OICIIO;GXGR;;;S-1-15-3-1024-3635283841-2530182609-996808640-1887759898-3848208603-3313616867-983405619-2501854204)(A;;FA;;;SY)(A;OICIIO;GA;;;SY)(A;CI;0x1200a9;;;BA)(A;OICI;0x1200a9;;;LS)(A;OICI;0x1200a9;;;NS)(A;OICI;0x1200a9;;;RC)(XA;;0x1200a9;;;BU;(Exists WIN://SYSAPPID))'
+
+	$WinAppsACL = Get-Acl $WinAppsPath
+	$WinAppsACL.SetSecurityDescriptorSddlForm($WinAppsDefaultPerms)
+
+	# Grant ALL APPLICATION PACKAGES "Read & execute" for this folder, subfolders and files
+	$GroupID = New-Object Security.Principal.SecurityIdentifier('S-1-15-2-1')
+	$NewRule = New-Object Security.AccessControl.FileSystemAccessRule($GroupID, 'ReadAndExecute', 'ObjectInherit,ContainerInherit', 'None', 'Allow')
+	$WinAppsACL.AddAccessRule($NewRule)
+
+	# Grant Users "Read & execute" for subfolders and files only
+	$GroupID = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-545')
+	$NewRule = New-Object Security.AccessControl.FileSystemAccessRule($GroupID, 'ReadAndExecute', 'ObjectInherit,ContainerInherit', 'InheritOnly', 'Allow')
+	$WinAppsACL.AddAccessRule($NewRule)
+
+	# Grant Administrators "Full control" for this folder, subfolders and files
+	$GroupID = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')
+	$NewRule = New-Object Security.AccessControl.FileSystemAccessRule($GroupID, 'FullControl', 'ObjectInherit,ContainerInherit', 'None', 'Allow')
+	$WinAppsACL.AddAccessRule($NewRule)
+
+	# Apply all of the above
+	Set-Acl $WinAppsPath $WinAppsACL
+
+	Write-Host
 
 	if ($DeepFixInheritance)
 	{
@@ -121,33 +148,6 @@ foreach ($WinAppsPath in $WinAppsPaths)
 			}
 		}
 	}
-
-	Write-Host
-	Write-Host "Fixing WindowsApps permissions..." -ForegroundColor Cyan
-
-	# Default ownership and permissions, courtesy of https://www.winhelponline.com/blog/windowsapps-folder-restore-default-permissions/
-	$WinAppsDefaultPerms = 'O:S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464G:SYD:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;OICIIO;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;S-1-15-3-1024-3635283841-2530182609-996808640-1887759898-3848208603-3313616867-983405619-2501854204)(A;OICIIO;GXGR;;;S-1-15-3-1024-3635283841-2530182609-996808640-1887759898-3848208603-3313616867-983405619-2501854204)(A;;FA;;;SY)(A;OICIIO;GA;;;SY)(A;CI;0x1200a9;;;BA)(A;OICI;0x1200a9;;;LS)(A;OICI;0x1200a9;;;NS)(A;OICI;0x1200a9;;;RC)(XA;;0x1200a9;;;BU;(Exists WIN://SYSAPPID))'
-
-	$WinAppsACL = Get-Acl $WinAppsPath
-	$WinAppsACL.SetSecurityDescriptorSddlForm($WinAppsDefaultPerms)
-
-	# Grant ALL APPLICATION PACKAGES "Read & execute" for this folder, subfolders and files
-	$GroupID = New-Object Security.Principal.SecurityIdentifier('S-1-15-2-1')
-	$NewRule = New-Object Security.AccessControl.FileSystemAccessRule($GroupID, 'ReadAndExecute', 'ObjectInherit,ContainerInherit', 'None', 'Allow')
-	$WinAppsACL.AddAccessRule($NewRule)
-
-	# Grant Users "Read & execute" for subfolders and files only
-	$GroupID = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-545')
-	$NewRule = New-Object Security.AccessControl.FileSystemAccessRule($GroupID, 'ReadAndExecute', 'ObjectInherit,ContainerInherit', 'InheritOnly', 'Allow')
-	$WinAppsACL.AddAccessRule($NewRule)
-
-	# Grant Administrators "Full control" for this folder, subfolders and files
-	$GroupID = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')
-	$NewRule = New-Object Security.AccessControl.FileSystemAccessRule($GroupID, 'FullControl', 'ObjectInherit,ContainerInherit', 'None', 'Allow')
-	$WinAppsACL.AddAccessRule($NewRule)
-
-	# Apply all of the above
-	Set-Acl $WinAppsPath $WinAppsACL
 
 	$WpSystem = Join-Path $WinAppsPath "..\WpSystem"
 
