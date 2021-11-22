@@ -1,5 +1,5 @@
 #
-# WindowsAppsUnfukker v1.0
+# WindowsAppsUnfukker v1.1
 # by AgentRev
 #
 # This shitstain code needs to run on the SYSTEM account via PsExec. Get it here:
@@ -19,7 +19,6 @@
 
 $WinAppsPaths = @("C:\Program Files\WindowsApps")
 $BackupExistingPerms = 1  # set to 1 to grab a backup before the unfukking
-$DeepFixInheritance = 0  # set to 1 if you disabled inheritance on the entire folder tree like dumbass me
 
 ####################################################################################################
 
@@ -72,6 +71,8 @@ if ($BackupExistingPerms)
 	}
 }
 
+[Regex]$FirstParenthesis = '\('
+
 foreach ($WinAppsPath in $WinAppsPaths)
 {
 	Write-Host
@@ -101,36 +102,49 @@ foreach ($WinAppsPath in $WinAppsPaths)
 	# Apply all of the above
 	Set-Acl $WinAppsPath $WinAppsACL
 
+	$DeepFixInheritance = 0
+
+	# Checks if you disabled inheritance on the entire folder tree like dumbass me
+	if (-not $DeepFixInheritance)
+	{
+		$AppxFolders = Get-ChildItem $WinAppsPath -Filter 'AppxMetadata' -Depth 1 -Directory -Force -Attributes !ReparsePoint  # ignores junctions
+
+		# if inheritance is disabled
+		if (($AppxFolders | Where-Object { (Get-Acl $_.FullName).AreAccessRulesProtected }).Count -gt 0)
+		{
+			$DeepFixInheritance = 1
+		}
+	}
+
 	Write-Host
 
 	if ($DeepFixInheritance)
 	{
-		Write-Host "Fixing folder tree inheritance, this could take a couple minutes..." -ForegroundColor Cyan
-		icacls "$WinAppsPath\*" /inheritancelevel:e /t /c /q 2>$null  # mutes junction errors
+		Write-Host "Fixing WindowsApps folder tree inheritance, this could take a couple minutes..." -ForegroundColor Cyan
+		icacls "$WinAppsPath\*" /inheritance:e /t /c /q 2>$null
 	}
 	else
 	{
-		Write-Host "Fixing subfolders inheritance..." -ForegroundColor Cyan
-		icacls "$WinAppsPath\*" /inheritancelevel:e /c /q 2>$null  # mutes junction errors
+		Write-Host "Fixing WindowsApps subfolders inheritance..." -ForegroundColor Cyan
+		icacls "$WinAppsPath\*" /inheritance:e /c /q 2>$null
 	}
 
 	Write-Host
-	Write-Host "Fixing app permissions..." -ForegroundColor Cyan
+	Write-Host "Fixing WindowsApps subfolders permissions..." -ForegroundColor Cyan
 
-	# Get all non-app folders, which most likely contain apps themselves
-	$AppsFolders = Get-ChildItem $WinAppsPath -Exclude *.* -Directory -Force -Attributes !ReparsePoint  # ignores junctions
+	# Get all app folder containers (they have no underscore in their name)
+	$AppsFolders = Get-ChildItem $WinAppsPath -Exclude *_* -Directory -Force -Attributes !ReparsePoint
 	$AppsFolders = @($WinAppsPath) + ($AppsFolders | ForEach-Object { $_.FullName })
-
-	[Regex]$FirstParenthesis = '\('
 
 	foreach ($AppsFolder in $AppsFolders)
 	{
-		$AppFolders = Get-ChildItem $AppsFolder -Directory -Force -Attributes !ReparsePoint  # ignores junctions
+		# Get all app folders
+		$AppFolders = Get-ChildItem $AppsFolder -Directory -Force -Attributes !ReparsePoint
 
 		# Now, time to smear the bullshit
 		foreach ($AppFolder in $AppFolders)
 		{
-			if ($AppFolder.Name -Match '(.+?)_.+(_\w+)')
+			if ($AppFolder.Name -Match '(.+?_).*?_.*?_.*?_(\w+$|\w{1,13})')
 			{
 				$AppFolderPath = $AppFolder.FullName
 				$AppFolderACL = Get-Acl $AppFolderPath
@@ -157,21 +171,38 @@ foreach ($WinAppsPath in $WinAppsPaths)
 		Write-Host
 		Write-Host "Fixing WpSystem permissions..." -ForegroundColor Cyan
 
-		$WpSystemACL = Get-Acl $WpSystem
+		# Grant ALL APPLICATION PACKAGES "Full control" for subfolders and files only
+		icacls $WpSystem /grant "*S-1-15-2-1:(OI)(CI)(IO)(F)" /q
 
 		# Grant Users "List folder contents" for this folder only
-		$GroupID = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-545')
-		$NewRule = New-Object Security.AccessControl.FileSystemAccessRule($GroupID, 'ReadAndExecute', 'None', 'None', 'Allow')
-		$WpSystemACL.AddAccessRule($NewRule)
+		icacls $WpSystem /grant "*S-1-5-32-545:(RX)" /q
 
 		# Grant Administrators "Full control" for this folder, subfolders and files
-		$GroupID = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')
-		$NewRule = New-Object Security.AccessControl.FileSystemAccessRule($GroupID, 'FullControl', 'ObjectInherit,ContainerInherit', 'None', 'Allow')
-		$WpSystemACL.AddAccessRule($NewRule)
-
-		# Apply all of the above
-		Set-Acl $WpSystem $WpSystemACL
+		icacls $WpSystem /grant "*S-1-5-32-544:(OI)(CI)(F)" /q
 	}
+}
+
+# Since we are on SYSTEM user, we cannot use environment variables to find AppData...
+$Username = (Get-WMIObject Win32_ComputerSystem).UserName.Split('\')[-1]
+$AppDataPackages = "C:\Users\$Username\AppData\Local\Packages"
+
+Write-Host
+
+if (Test-Path $AppDataPackages -PathType Container)
+{
+	Write-Host "Fixing AppData Packages permissions, this could take a couple minutes..." -ForegroundColor Cyan
+
+	# Enable folder tree inheritance
+	icacls $AppDataPackages /inheritance:e /t /c /q
+
+	# Grant ALL APPLICATION PACKAGES "Full control" for this folder, subfolders and files
+	icacls $AppDataPackages /grant "*S-1-15-2-1:(OI)(CI)(F)"
+}
+else
+{
+	Write-Warning "AppData Packages not found, please file a GitHub issue here:
+https://github.com/AgentRev/WindowsAppsUnfukker/issues
+Copy-paste this in the description: $AppDataPackages"
 }
 
 Write-Host
