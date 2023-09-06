@@ -17,7 +17,9 @@
 # Then, for example: icacls "C:\Program Files" /restore "C:\Program Files\WindowsApps_20211109_221014.txt" /c /q 2>$null
 #
 
-$WinAppsPaths = @("C:\Program Files\WindowsApps")
+
+$C = $Env:systemdrive[0]  # If you are changing the below variable to include e.g. secondary drives, you may need to delete this line.
+$WinAppsPaths = @("${C}:\Program Files\WindowsApps")
 $BackupExistingPerms = 1  # set to 1 to grab a backup before the unfukking
 
 ####################################################################################################
@@ -184,11 +186,8 @@ foreach ($WinAppsPath in $WinAppsPaths)
 
 # Since we are on SYSTEM user, we cannot use environment variables to find AppData...
 $Username = (Get-WMIObject Win32_ComputerSystem).UserName.Split('\')[-1]
-$AppDataPackages = "C:\Users\$Username\AppData\Local\Packages"
-
-Write-Host
-
-if (Test-Path $AppDataPackages -PathType Container)
+$AppDataPackages = "${C}:\Users\$Username\AppData\Local\Packages"
+Function DoAppDataPackages 
 {
 	Write-Host "Fixing AppData Packages permissions, this could take a couple minutes..." -ForegroundColor Cyan
 
@@ -198,11 +197,43 @@ if (Test-Path $AppDataPackages -PathType Container)
 	# Grant ALL APPLICATION PACKAGES "Full control" for this folder, subfolders and files
 	icacls $AppDataPackages /grant "*S-1-15-2-1:(OI)(CI)(F)"
 }
+
+Write-Host
+
+if (Test-Path $AppDataPackages -PathType Container)
+{
+	DoAppDataPackages
+}
+elseif ( ((dir ${C}:\Users\).length -eq 2) -and ((dir ${C}:\Users\).name[1] -eq "Public") )
+{
+	$UserFolderName = (dir ${C}:\Users\).name[0]
+	$AppDataPackages = "${C}:\Users\$UserFolderName\AppData\Local\Packages"
+	DoAppDataPackages
+}
+else
+{
+	$UserFolderName = Read-Host -prompt "Please enter the name of your User folder. (This is usually seen as ${C}:\Users\{YourUserFolder}\ in Explorer.)"
+ 	$AppDataPackages = "${C}:\Users\$UserFolderName\AppData\Local\Packages"
+  	if (Test-Path $AppDataPackages -PathType Container)
+ 	{
+  		DoAppDataPackages
+  	}
+   	elseif (Test-Path $UserFolderName -PathType Container) # in case the user enters the full path of their user folder
+    	{
+		$SplitUFN = $UserFolderName.Split("\")[-1]
+		$AppDataPackages = "${C}:\Users\$SplitUFN\AppData\Local\Packages"
+		if (Test-Path $AppDataPackages -PathType Container)
+		{
+			 DoAppDataPackages
+		}
+	}
+    	
+}
 else
 {
 	Write-Warning "AppData Packages not found, please file a GitHub issue here:
 https://github.com/AgentRev/WindowsAppsUnfukker/issues
-Copy-paste this in the description: $AppDataPackages"
+Copy-paste this in the description: $AppDataPackages" 
 }
 
 Write-Host
