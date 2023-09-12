@@ -227,13 +227,12 @@ else
 			 DoAppDataPackages
 		}
 	}
-    	
-}
-else
-{
-	Write-Warning "AppData Packages not found, please file a GitHub issue here:
+	else
+	{
+		Write-Warning "AppData Packages not found, please file a GitHub issue here:
 https://github.com/AgentRev/WindowsAppsUnfukker/issues
-Copy-paste this in the description: $AppDataPackages" 
+Copy-paste this in the description: $AppDataPackages"
+	}
 }
 
 Write-Host
