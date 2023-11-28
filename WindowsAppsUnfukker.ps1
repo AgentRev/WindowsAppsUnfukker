@@ -1,14 +1,14 @@
 #
-# WindowsAppsUnfukker v1.1
+# WindowsAppsUnfukker v1.2
 # by AgentRev
 #
-# This shitstain code needs to run on the SYSTEM account via PsExec. Get it here:
-# https://docs.microsoft.com/en-us/sysinternals/downloads/pstools
+# This shitstain code needs to run on the SYSTEM account via PAExec. Get it here:
+# https://www.poweradmin.com/paexec/
 #
 # How to start the motherfukker:
-# 1. Download PsTools from the link above and extract it a folder.
-# 2. Open CMD as admin, then access that folder: cd "PSTOOLS_PATH_HERE"
-# 3. Execute the script: psexec.exe -s -i powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1"
+# 1. Download PAExec from the link above.
+# 2. Open CMD as admin (the real CMD, not PowerShell), then access that folder: cd "PAEXEC_PATH_HERE"
+# 3. Adjust "FULL_PATH_HERE" and execute the script: paexec.exe -s -i powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1" "%LocalAppData%"
 #
 # Ajust the bitch-ass variables below as needed.
 # You can include secondary drives as well. For example: @("C:\Program Files\WindowsApps", "D:\WindowsApps")
@@ -17,9 +17,7 @@
 # Then, for example: icacls "C:\Program Files" /restore "C:\Program Files\WindowsApps_20211109_221014.txt" /c /q 2>$null
 #
 
-
-$C = $Env:systemdrive[0]  # If you are changing the below variable to include e.g. secondary drives, you may need to delete this line.
-$WinAppsPaths = @("${C}:\Program Files\WindowsApps")
+$WinAppsPaths = @("%SystemDrive%\Program Files\WindowsApps")
 $BackupExistingPerms = 1  # set to 1 to grab a backup before the unfukking
 
 ####################################################################################################
@@ -27,12 +25,10 @@ $BackupExistingPerms = 1  # set to 1 to grab a backup before the unfukking
 Write-Host
 Write-Host "Welcome to the amazing WindowsApps Unfukker! Please sit tight!!" -ForegroundColor Green
 
-$WinVer = [Environment]::OSVersion.Version
-
-if (-not ($WinVer.Major -eq 10 -and $WinVer.Build -lt 22000))
+if ([Environment]::OSVersion.Version.Major -ne 10)
 {
 	Write-Host
-	Write-Warning "This script has only been tested on Windows 10. Cuntinue at your own risk!!" -WarningAction Inquire
+	Write-Warning "This script has only been tested on Windows 10 and 11. Cuntinue at your own risk!!" -WarningAction Inquire
 }
 
 if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne 'S-1-5-18')
@@ -58,19 +54,17 @@ foreach ($WinAppsPath in $WinAppsPaths)
 	}
 }
 
-if ($BackupExistingPerms)
+function DoBackupExistingPerms($AppsPath)
 {
-	Write-Host
-	Write-Host "Backup of existing permissions..." -ForegroundColor Cyan
+	if (-not $BackupExistingPerms) { return }
+
+	Write-Host "Backup of existing permissions..."
 
 	$Timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+	$BackupPath = Join-Path (Resolve-Path "$AppsPath\..").Path ((Get-Item $AppsPath -Force).Name + "_$Timestamp.txt")
+	icacls $AppsPath /save $BackupPath /t /c /q 2>$null  # mutes junction errors
 
-	foreach ($WinAppsPath in $WinAppsPaths)
-	{
-		$BackupPath = Join-Path (Resolve-Path "$WinAppsPath\..").Path "WindowsApps_$Timestamp.txt"
-		icacls $WinAppsPath /save $BackupPath /t /c /q 2>$null  # mutes junction errors
-		Write-Host "Saved to $BackupPath"
-	}
+	Write-Host "Saved to $BackupPath"
 }
 
 [Regex]$FirstParenthesis = '\('
@@ -79,6 +73,7 @@ foreach ($WinAppsPath in $WinAppsPaths)
 {
 	Write-Host
 	Write-Host "Fixing WindowsApps permissions..." -ForegroundColor Cyan
+	DoBackupExistingPerms($WinAppsPath)
 
 	# Default ownership and permissions, courtesy of https://www.winhelponline.com/blog/windowsapps-folder-restore-default-permissions/
 	$WinAppsDefaultPerms = 'O:S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464G:SYD:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;OICIIO;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;0x1200a9;;;S-1-15-3-1024-3635283841-2530182609-996808640-1887759898-3848208603-3313616867-983405619-2501854204)(A;OICIIO;GXGR;;;S-1-15-3-1024-3635283841-2530182609-996808640-1887759898-3848208603-3313616867-983405619-2501854204)(A;;FA;;;SY)(A;OICIIO;GA;;;SY)(A;CI;0x1200a9;;;BA)(A;OICI;0x1200a9;;;LS)(A;OICI;0x1200a9;;;NS)(A;OICI;0x1200a9;;;RC)(XA;;0x1200a9;;;BU;(Exists WIN://SYSAPPID))'
@@ -146,7 +141,7 @@ foreach ($WinAppsPath in $WinAppsPaths)
 		# Now, time to smear the bullshit
 		foreach ($AppFolder in $AppFolders)
 		{
-			if ($AppFolder.Name -Match '(.+?_).*?_.*?_.*?_(\w+$|\w{1,13})')
+			if ($AppFolder.Name -Match '(.+?_).*?_.*?_.*?_([a-zA-Z0-9]+)')
 			{
 				$AppFolderPath = $AppFolder.FullName
 				$AppFolderACL = Get-Acl $AppFolderPath
@@ -172,6 +167,7 @@ foreach ($WinAppsPath in $WinAppsPaths)
 	{
 		Write-Host
 		Write-Host "Fixing WpSystem permissions..." -ForegroundColor Cyan
+		DoBackupExistingPerms($WpSystem)
 
 		# Grant ALL APPLICATION PACKAGES "Full control" for subfolders and files only
 		icacls $WpSystem /grant "*S-1-15-2-1:(OI)(CI)(IO)(F)" /q
@@ -184,12 +180,28 @@ foreach ($WinAppsPath in $WinAppsPaths)
 	}
 }
 
-# Since we are on SYSTEM user, we cannot use environment variables to find AppData...
-$Username = (Get-WMIObject Win32_ComputerSystem).UserName.Split('\')[-1]
-$AppDataPackages = "${C}:\Users\$Username\AppData\Local\Packages"
-Function DoAppDataPackages 
+
+# Fix AppData Packages
+
+$AppDataPackages = ""
+$C = $Env:SystemDrive
+
+if ($args) # command line args
 {
+	$AppDataPackages = $args[0] + "\Packages"
+}
+else
+{
+	# Since we are on SYSTEM user, we cannot use environment variables to find AppData...
+	$Username = (Get-WMIObject Win32_ComputerSystem).UserName.Split('\')[-1]
+	$AppDataPackages = "${C}\Users\$Username\AppData\Local\Packages"
+}
+
+function DoAppDataPackages
+{
+	Write-Host
 	Write-Host "Fixing AppData Packages permissions, this could take a couple minutes..." -ForegroundColor Cyan
+	DoBackupExistingPerms($AppDataPackages)
 
 	# Enable folder tree inheritance
 	icacls $AppDataPackages /inheritance:e /t /c /q
@@ -198,41 +210,54 @@ Function DoAppDataPackages
 	icacls $AppDataPackages /grant "*S-1-15-2-1:(OI)(CI)(F)"
 }
 
-Write-Host
-
 if (Test-Path $AppDataPackages -PathType Container)
 {
 	DoAppDataPackages
 }
-elseif ( ((dir ${C}:\Users\).length -eq 2) -and ((dir ${C}:\Users\).name[1] -eq "Public") )
-{
-	$UserFolderName = (dir ${C}:\Users\).name[0]
-	$AppDataPackages = "${C}:\Users\$UserFolderName\AppData\Local\Packages"
-	DoAppDataPackages
-}
 else
 {
-	$UserFolderName = Read-Host -prompt "Please enter the name of your User folder. (This is usually seen as ${C}:\Users\{YourUserFolder}\ in Explorer.)"
- 	$AppDataPackages = "${C}:\Users\$UserFolderName\AppData\Local\Packages"
-  	if (Test-Path $AppDataPackages -PathType Container)
- 	{
-  		DoAppDataPackages
-  	}
-   	elseif (Test-Path $UserFolderName -PathType Container) # in case the user enters the full path of their user folder
-    	{
+	Write-Host
+	$UserFolderName = Read-Host "Please enter the name of your User folder. (This is usually seen as ${C}\Users\{USERNAME}\ in Explorer.)"
+	$AppDataPackages = "${C}\Users\$UserFolderName\AppData\Local\Packages"
+
+	if (Test-Path $UserFolderName -PathType Container) # in case the user enters the full path of their user folder
+	{
 		$SplitUFN = $UserFolderName.Split("\")[-1]
-		$AppDataPackages = "${C}:\Users\$SplitUFN\AppData\Local\Packages"
-		if (Test-Path $AppDataPackages -PathType Container)
-		{
-			 DoAppDataPackages
-		}
+		$AppDataPackages = "${C}\Users\$SplitUFN\AppData\Local\Packages"
+	}
+
+	if (Test-Path $AppDataPackages -PathType Container)
+	{
+		DoAppDataPackages
 	}
 	else
 	{
-		Write-Warning "AppData Packages not found, please file a GitHub issue here:
-https://github.com/AgentRev/WindowsAppsUnfukker/issues
-Copy-paste this in the description: $AppDataPackages"
+		Write-Warning 'AppData Packages not found, make sure that you properly ran the PAExec command in CMD, and that you correctly wrote "%LocalAppData%" at the end'
 	}
+}
+
+
+# Fix ProgramData Packages
+
+$ProgramData = "${C}\ProgramData\Packages"
+
+if (Test-Path $ProgramData -PathType Container)
+{
+	Write-Host
+	Write-Host "Fixing ProgramData Packages permissions..." -ForegroundColor Cyan
+	DoBackupExistingPerms($ProgramData)
+
+	# Grant SYSTEM ownership of this folder
+	icacls $ProgramData /setowner "*S-1-5-18" /c /q
+
+	# Deeply grant SYSTEM "Full control" for this folder, subfolders and files
+	icacls $ProgramData /grant "*S-1-5-18:(OI)(CI)(F)" /t /c /q
+
+	# Deeply grant TrustedInstaller "Full control" for this folder, subfolders and files
+	icacls $ProgramData /grant "*S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464:(OI)(CI)(F)" /t /c /q
+
+	# Deeply grant Administrators "Full control" for this folder, subfolders and files
+	icacls $ProgramData /grant "*S-1-5-32-544:(OI)(CI)(F)" /t /c /q
 }
 
 Write-Host

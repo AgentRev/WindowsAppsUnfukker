@@ -17,10 +17,10 @@ Jesus Fucking Christ.
 ---
 ### How to start the motherfukker
 
-1. Download and extract [PsTools](https://docs.microsoft.com/en-us/sysinternals/downloads/pstools) to a folder.
-2. Open CMD as admin, then access that folder: `cd "PSTOOLS_PATH_HERE"`
-3. Execute the script: <br>
-   `psexec.exe -s -i powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1"`
+1. Download and extract [PAExec](https://www.poweradmin.com/paexec/) to a folder.
+2. Open CMD as admin (the real CMD, not PowerShell), then access that folder: `cd "PAEXEC_PATH_HERE"`
+3. Adjust `FULL_PATH_HERE` and execute the script: <br>
+   `paexec.exe -s -i powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1" "%LocalAppData%"`
 
 ---
-Note: If your objective is to modify files inside an app folder, there's an extra step required after running the script. You have to rename the app folder by adding `-old` at the end, make a copy of the folder, and rename the copy back to the original name. This will allow you to modify the files inside if they are not [encrypted](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cipher). I don't why "Full control" permissions alone aren't sufficient, probably just [Microsoft eating a bag of dicks](https://www.youtube.com/watch?v=Gksc2aR2KCk) as usual.
+Note: If your objective is to modify files inside an app folder, I don't provide any assistance for that use-case, but there is an extra step required after running the script. You have to rename the app folder by adding `-old` at the end, make a copy of the folder, and rename the copy back to the original name. This will allow you to modify the files inside if they are not [encrypted](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cipher). I don't why "Full control" permissions alone aren't sufficient, probably just [Microsoft eating a bag of dicks](https://www.youtube.com/watch?v=Gksc2aR2KCk) as usual.
