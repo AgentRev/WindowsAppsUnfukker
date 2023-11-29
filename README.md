@@ -17,8 +17,8 @@ Jesus Fucking Christ.
 ---
 ### How to start the motherfukker
 
-1. Download and extract [PAExec](https://www.poweradmin.com/paexec/) to a folder.
-2. Open CMD as admin (the real CMD, not PowerShell), then access that folder: `cd "PAEXEC_PATH_HERE"`
+1. Download [PAExec](https://www.poweradmin.com/paexec/)
+2. Open CMD as admin (the real CMD, not PowerShell), then access its folder: `cd "PAEXEC_PATH_HERE"`
 3. Adjust `FULL_PATH_HERE` and execute the script:
    ```
    paexec.exe -s -i powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1" "%LocalAppData%"
