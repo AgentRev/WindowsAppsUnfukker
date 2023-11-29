@@ -7,13 +7,13 @@
 #
 # How to start the motherfukker:
 # 1. Download PAExec from the link above.
-# 2. Open CMD as admin (the real CMD, not PowerShell), then access that folder: cd "PAEXEC_PATH_HERE"
+# 2. Open CMD as admin (the real CMD, not PowerShell), then access its folder: cd "PAEXEC_PATH_HERE"
 # 3. Adjust "FULL_PATH_HERE" and execute the script: paexec.exe -s -i powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1" "%LocalAppData%"
 #
 # Ajust the bitch-ass variables below as needed.
 # You can include secondary drives as well. For example: @("C:\Program Files\WindowsApps", "D:\WindowsApps")
 #
-# If you want to restore a backup, you must first open PowerShell with: psexec.exe -s -i powershell
+# If you want to restore a backup, you must first open PowerShell with: paexec.exe -s -i powershell
 # Then, for example: icacls "C:\Program Files" /restore "C:\Program Files\WindowsApps_20211109_221014.txt" /c /q 2>$null
 #
 
@@ -34,7 +34,7 @@ if ([Environment]::OSVersion.Version.Major -ne 10)
 if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne 'S-1-5-18')
 {
 	Write-Host
-	Write-Host "Error: Not running as SYSTEM user!! Please start this script via PsExec." -ForegroundColor Red
+	Write-Host "Error: Not running as SYSTEM user!! Please start this script via PAExec." -ForegroundColor Red
 	Write-Host
 	pause
 	exit 1
