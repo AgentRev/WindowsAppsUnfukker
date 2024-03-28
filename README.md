@@ -17,11 +17,12 @@ Jesus Fucking Christ.
 ---
 ### How to start the motherfukker
 
-1. Download [PAExec](https://www.poweradmin.com/paexec/)
-2. Open CMD as admin (the real CMD, not PowerShell), then access its folder: `cd PAEXEC_PATH_HERE`
-3. Adjust `FULL_PATH_HERE` and execute the script:
+1. Download the script [here](https://github.com/AgentRev/WindowsAppsUnfukker/archive/refs/heads/main.zip)
+2. Download [PAExec](https://www.poweradmin.com/paexec/)
+3. Open CMD as admin (the real CMD, not PowerShell), then access its folder: `cd PAEXEC_PATH_HERE`
+4. Adjust `FULL_PATH_HERE` and execute the script:
    ```
-   paexec -s -i powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1" "%LocalAppData%"
+   paexec -s -i cmd /C powershell -ExecutionPolicy Bypass -File "FULL_PATH_HERE\WindowsAppsUnfukker.ps1" "%LocalAppData%" ^|^| pause
    ```
    (If it says exit code -196608, it means the absolute path is invalid, double-check the `-File` path you entered)
 
